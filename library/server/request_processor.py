@@ -1,33 +1,40 @@
 from .. import messages
 from .. import logger
+import sys
 from .connected_client import ConnectedClient
 
 class RequestProcessor:
     def __init__(self):
         self.connected_clients = []
+        self.sockets = [sys.stdin]
         
     def get_connected_clients(self):
         return self.connected_clients
 
-    def add_client(self, connected_client: ConnectedClient):
-        self.connected_clients.append(connected_client)
+    def add_client(self, new_client: ConnectedClient):
+        self.sockets.append(new_client.socket)
+        self.connected_clients.append(new_client)
 
     def answer_client(self, client: ConnectedClient):
-        for connected_client in self.connected_clients:
-            if client is connected_client:
-                message = client.receive_message()
+        # for connected_client in self.connected_clients:
+        #     if client is connected_client:
+        message = client.receive_message()
 
-                if message is None:
-                    self.disconnect_client(client)
+        if message is None:
+            self.disconnect_client(client)
 
-                elif message['mtp'] == 'SendChat':
-                    self.send_chat_from_user(client, message['data']['message'])
+        elif message['mtp'] == 'SendChat':
+            self.send_chat_from_user(client, message['data']['message'])
 
-                elif message['mtp'] == 'SetUsername':
-                    pass
+        elif message['mtp'] == 'Disconnect':
+            client.is_connected = True
+            self.disconnect_client(client)
 
-                else:
-                    logger.error('Unsupported message type received!')
+        elif message['mtp'] == 'SetUsername':
+            pass
+
+        else:
+            logger.error('Unsupported message type received!')
 
     def send_chat_from_user(self, user, message):
         for client in self.connected_clients:
@@ -37,12 +44,12 @@ class RequestProcessor:
 
     def disconnect_client(self, outgoing_client: ConnectedClient):
         if outgoing_client.is_connected:
-            outgoing_client.send_message(messages.Disconnect())
             logger.debug(f'Disconnected {outgoing_client}')
         else:
             logger.warning(f'Client ({outgoing_client}) disconnected unexpectedly.')
 
         self.connected_clients.remove(outgoing_client)
+        self.sockets.remove(outgoing_client.socket)
         self.announce(f'{outgoing_client.name} left the server.')
         outgoing_client.close()
 
@@ -79,8 +86,8 @@ class RequestProcessor:
     def check_name(self, name):
         for client in self.connected_clients:
             if name == client.name:
-                return False
-        return True
+                return True
+        return False
 
 
     def purge_clients(self):

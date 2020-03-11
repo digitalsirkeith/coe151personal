@@ -30,9 +30,13 @@ class Connection:
             logger.error(f'MTP Mismatch! Expected: AssignUsername. Got: {response["mtp"]}')
             return False
         else:
-            self.name = response['data']['name']
-            logger.info(f'Connected with name: {self.name}')
-            return True
+            if response['status'] != 'OK':
+                logger.error(f'Status: {response["status"]}. Disconnecting')
+                return False
+            else:
+                self.name = response['data']['name']
+                logger.info(f'Connected with name: {self.name}')
+                return True
 
     def terminate(self):
         if self.is_connected:
