@@ -10,7 +10,8 @@ def run():
     name = prompt_for_username()
 
     connection = Connection(hostname, port)
-    connection.login(name)
+    if connection.login(name) == False:
+        return
 
     while True:
         read_list, _, __ = select.select([connection.socket, sys.stdin], [], [])
@@ -19,7 +20,8 @@ def run():
             if fd is sys.stdin:
                 user_input = input()
                 message = connection.encode_message(user_input)
-                connection.send_message(message)
+                if message:
+                    connection.send_message(message)
 
             else:
                 # server sent something
@@ -38,8 +40,12 @@ def run():
                     print(f'{name}: {user_message}')
 
                 elif message['mtp'] == 'SetUsername' or message['mtp'] == 'AssignUsername':
-                    connection.set_name(message['mtp']['name'])
-                    print(f'Your new name is: {connection.name}')
+                    status = message['status']
+                    if status == 'OK':
+                        connection.set_name(message['data']['name'])
+                        print(f'Your new name is: {connection.name}')
+                    else:
+                        print(f'Failed to change name: {status}')
 
                 elif message['mtp'] == 'Disconnect':
                     reason = message['data']['message']
@@ -87,7 +93,7 @@ def run():
                     else:
                         print(f'Failed to unmute user: {status}')
 
-                elif message['mtp'] == 'SetAdmin':
+                elif message['mtp'] == 'SetAsAdmin':
                     status = message['status']
                     if status == 'OK':
                         print('Set user as admin')

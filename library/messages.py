@@ -49,9 +49,9 @@ def UnmuteUser(name: str="", status: str="OK"):
         'status': status
     })
 
-def SetAdmin(name: str="", status: str="OK"):
+def SetAsAdmin(name: str="", status: str="OK"):
     return json.dumps({
-        'mtp': 'SetAdmin',
+        'mtp': 'SetAsAdmin',
         'data': {
             'name': name
         },

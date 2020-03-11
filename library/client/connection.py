@@ -13,9 +13,24 @@ class Connection:
     def send_message(self, message):
         self.socket.send(message.encode())
 
+    def read_json_object(self):
+        open_brackets = 1
+        data = self.socket.recv(1).decode()
+
+        if not data:
+            return ''
+
+        while open_brackets:
+            data += self.socket.recv(1).decode()
+            if data[-1] == '{':
+                open_brackets += 1
+            elif data[-1] == '}':
+                open_brackets -= 1
+
+        return data
+
     def receive_message(self):
-        data = self.socket.recv(config.MAX_MESSAGE_LEN).decode()
-        print(data)
+        data = self.read_json_object()
         if data == '':
             return None
         else:
@@ -52,26 +67,67 @@ class Connection:
 
         if tokens[0][0] != '/':
             return messages.SendChat(user_input)
+
         elif tokens[0] in ['/changename', '/setusername', '/su']:
-            return messages.SetUsername(tokens[1])
+            if len(tokens) == 2:
+                return messages.SetUsername(tokens[1])
+            else:
+                logger.error(f'Usage: {tokens[0]} <username>')
+                return None
+
         elif tokens[0] in ['/request_user_info', '/who', '/rui']:
-            return messages.RequestUserInfo(tokens[1])
+            if len(tokens) == 2:
+                return messages.RequestUserInfo(tokens[1])
+            else:
+                logger.error(f'Usage: {tokens[0]} <username>')
+                return None
+
         elif tokens[0] in ['/request_local_time', '/time']:
             return messages.RequestLocalTime()
+
         elif tokens[0] in ['/whisper_to_user', '/msg', '/w']:
-            return messages.WhisperToUser(self.name, [tokens[1]], ' '.join(tokens[2:]))
+            if len(tokens) >= 3:
+                return messages.WhisperToUser(self.name, [tokens[1]], ' '.join(tokens[2:]))
+            else:
+                logger.error(f'Usage: {tokens[0]} <username> <message>')
+                return None
+            
         elif tokens[0] in ['/request_online_list', '/online', '/list']:
             return messages.RequestOnlineList()
+
         elif tokens[0] in ['/quit', '/exit', '/disconnect']:
             return messages.Disconnect()
+
         elif tokens[0] in ['/kick', '/kick_user']:
-            return messages.KickUser(tokens[1])
+            if len(tokens) == 2:
+                return messages.KickUser(tokens[1])
+            else:
+                logger.error(f'Usage: {tokens[0]} <username>')
+                return None
+
         elif tokens[0] in ['/mute', '/mute_user']:
-            return messages.MuteUser(tokens[1])
+            if len(tokens) == 2:
+                return messages.MuteUser(tokens[1])
+            else:
+                logger.error(f'Usage: {tokens[0]} <username>')
+                return None
+            
+
         elif tokens[0] in ['/unmute', '/unmute_user']:
-            return messages.UnmuteUser(tokens[1])
+            if len(tokens) == 2:
+                return messages.UnmuteUser(tokens[1])
+            else:
+                logger.error(f'Usage: {tokens[0]} <username>')
+                return None
+            
+
         elif tokens[0] in ['/op', '/setadmin']:
-            return messages.UnmuteUser(tokens[1])
+            if len(tokens) == 2:
+                return messages.SetAsAdmin(tokens[1])
+            else:
+                logger.error(f'Usage: {tokens[0]} <username>')
+                return None
+            
         else:
             logger.error('Unknown command!')
             return None
