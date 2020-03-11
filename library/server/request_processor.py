@@ -1,31 +1,6 @@
 from .. import messages
-from .. import config
 from .. import logger
-import json
-
-class ConnectedClient:
-    def __init__(self, conn, addr):
-        self.socket = conn
-        self.addr = addr
-        self.name = ''
-        self.is_connected = True
-
-    def send_message(self, message):
-        self.socket.send(message.encode())
-
-    def receive_message(self):
-        data = self.socket.recv(config.MAX_MESSAGE_LEN).decode()
-        if data == '':
-            self.is_connected = False
-            return None
-        else:
-            return json.loads(data)
-
-    def set_name(self, name):
-        self.name = name
-
-    def __repr__(self):
-        return f'{self.addr[0]}:{self.addr[1]}'
+from .connected_client import ConnectedClient
 
 class RequestProcessor:
     def __init__(self):
@@ -41,17 +16,32 @@ class RequestProcessor:
         for connected_client in self.connected_clients:
             if client is connected_client:
                 message = client.receive_message()
+
                 if message is None:
-                    logger.warning(f'Client ({client}) disconnected unexpectedly.')
                     self.disconnect_client(client)
+
+                elif message['mtp'] == 'SendChat':
+                    self.send_chat_from_user(client, message)
+                    pass
+
+                else:
+                    logger.error('Unsupported message type received!')
+
+    def send_chat_from_user(self, user, message):
+        for client in self.connected_clients:
+            if client is not user:
+                client.send_message(messages.SendChatFromUser(user.name, message))
+        logger.chat(f'{user.name}: {message}')
 
     def disconnect_client(self, outgoing_client: ConnectedClient):
         if outgoing_client.is_connected:
             outgoing_client.send_message()
             pass
         else:
+            logger.warning(f'Client ({outgoing_client}) disconnected unexpectedly.')
             self.connected_clients.remove(outgoing_client)
-            self.announce(f'{outgoing_client.name} left the server.')
+        self.announce(f'{outgoing_client.name} left the server.')
+        outgoing_client.close()
 
     def announce(self, server_message):
         for client in self.connected_clients:
@@ -76,6 +66,9 @@ class RequestProcessor:
             client.set_name(requested_name)
             
             return True
+
+    def shutdown(self):
+        pass
 
     def purge_clients(self):
         pass

@@ -15,3 +15,7 @@ def warning(message):
 def error(message):
     if 'error' in config.ENABLED_LOGGERS:
         print(f'[ERROR] {message}')
+
+def chat(message):
+    if 'chat' in config.ENABLED_LOGGERS:
+        print(f'[CHAT] {message}')

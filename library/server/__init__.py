@@ -1,17 +1,18 @@
 import socket
 import select
+import sys
 from .. import config
 from .. import logger
-from .connection import ConnectedClient, RequestProcessor
+from .connected_client import ConnectedClient
+from .request_processor import RequestProcessor
 
 def prompt_for_port():
-    print('Select port for server to run on: ', end='')
-    user_input = input()
+    user_input = input('Select port for server to run on: ')
     return int(user_input)
 
 def run():
     request_processor = RequestProcessor()
-    sockets = []
+    sockets = [sys.stdin]
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
         if config.USE_DEFAULT_PORT:
@@ -28,8 +29,8 @@ def run():
         while True:
             read_list, _, __ = select.select(sockets, [], [])
 
-            for sock in read_list:
-                if sock == server_socket:
+            for fd in read_list:
+                if fd == server_socket:
                     logger.debug('Incoming new connection.')
                     conn, addr = server_socket.accept()
                     logger.debug(f'New connection from: {addr[0]}:{addr[1]}.')
@@ -39,10 +40,18 @@ def run():
                         sockets.append(new_client.socket)
                         request_processor.add_client(new_client)
                         logger.info(f'Handshake successful with {new_client}')
+                        request_processor.announce(f'{new_client.name} joined the server.')
+                        
+                elif fd == sys.stdin:
+                    # User entered a server command.
+                    user_input = input()
+                    if user_input == 'exit':
+                        request_processor.shutdown()
+                        break
                 else:
                     # Someone sent something, find who did it and process it accordingly
                     for client in request_processor.get_connected_clients():
-                        if sock == client.socket:
+                        if fd == client.socket:
                             request_processor.answer_client(client)
 
 
