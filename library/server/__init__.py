@@ -25,7 +25,7 @@ def run():
         server_socket.listen(config.MAXIMUM_CONNECTIONS)
         request_processor.sockets.append(server_socket)
 
-        while True:
+        while request_processor.is_running:
             read_list, _, __ = select.select(request_processor.sockets, [], [])
 
             for fd in read_list:
@@ -45,8 +45,7 @@ def run():
                     user_input = input()
                     if user_input in ['exit', '/exit']:
                         request_processor.shutdown()
-                        server_socket.close
-                        return
+                        server_socket.close()
                 else:
                     # Someone sent something, find who did it and process it accordingly
                     for client in request_processor.get_connected_clients():

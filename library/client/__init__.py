@@ -33,11 +33,66 @@ def run():
                     print(message['data']['message'])
 
                 elif message['mtp'] == 'SendChatFromUser':
-                    print(f'{message["data"]["name"]}: {message["data"]["message"]}')
+                    name = message['data']['name']
+                    user_message = message['data']['message']
+                    print(f'{name}: {user_message}')
 
-                elif message['mtp'] == 'AssignUsername':
+                elif message['mtp'] == 'SetUsername' or message['mtp'] == 'AssignUsername':
                     connection.set_name(message['mtp']['name'])
                     print(f'Your new name is: {connection.name}')
+
+                elif message['mtp'] == 'Disconnect':
+                    reason = message['data']['message']
+                    print(f'Disconnected. {reason}')
+                    connection.terminate()
+                    return
+                
+                elif message['mtp'] == 'ProvideUserInfo':
+                    name = message['data']['name']
+                    ip = message['data']['ip']
+                    port = message['data']['port']
+                    print(f'{name} is {ip}:{port}')
+
+                elif message['mtp'] == 'SendLocalTime':
+                    local_time = message['data']['time']
+                    print(f'Server local time: {local_time}')
+
+                elif message['mtp'] == 'WhisperFromUser':
+                    name = message['data']['name']
+                    user_message = message['data']['message']
+                    print(f'[{name} -> me]: {user_message}')
+
+                elif message['mtp'] == 'SendOnlineList':
+                    names = message['data']['names']
+                    print(f'Online Users:', ', '.join(names))
+
+                elif message['mtp'] == 'KickUser':
+                    status = message['status']
+                    if status == 'OK':
+                        print('Kicked user')
+                    else:
+                        print(f'Failed to kick user: {status}')
+
+                elif message['mtp'] == 'MuteUser':
+                    status = message['status']
+                    if status == 'OK':
+                        print('Muted user')
+                    else:
+                        print(f'Failed to mute user: {status}')
+
+                elif message['mtp'] == 'UnmuteUser':
+                    status = message['status']
+                    if status == 'OK':
+                        print('Unmuted user')
+                    else:
+                        print(f'Failed to unmute user: {status}')
+
+                elif message['mtp'] == 'SetAdmin':
+                    status = message['status']
+                    if status == 'OK':
+                        print('Set user as admin')
+                    else:
+                        print(f'Failed to set user as admin: {status}')
 
                 else:
                     logger.error('Unsupported message type received!')

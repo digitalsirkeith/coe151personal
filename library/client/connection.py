@@ -9,15 +9,14 @@ class Connection:
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((hostname, port))
         self.name = None
-        self.is_connected = True
 
     def send_message(self, message):
         self.socket.send(message.encode())
 
     def receive_message(self):
         data = self.socket.recv(config.MAX_MESSAGE_LEN).decode()
+        print(data)
         if data == '':
-            self.is_connected = False
             return None
         else:
             return json.loads(data)
@@ -39,8 +38,7 @@ class Connection:
                 return True
 
     def terminate(self):
-        if self.is_connected:
-            self.send_message(messages.Disconnect())
+        self.socket.close()
         logger.info('Connection terminated.')
 
     def set_name(self, new_name):

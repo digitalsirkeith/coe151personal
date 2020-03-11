@@ -1,23 +1,29 @@
 from .. import messages
 from .. import logger
+from .. import config
 import sys
+import time
 from .connected_client import ConnectedClient
 
 class RequestProcessor:
     def __init__(self):
         self.connected_clients = []
         self.sockets = [sys.stdin]
+        self.is_running = True
+        self.admin = None
+        self.muted_list = []
         
     def get_connected_clients(self):
         return self.connected_clients
 
     def add_client(self, new_client: ConnectedClient):
+        if self.admin is None:
+            self.admin = new_client
         self.sockets.append(new_client.socket)
         self.connected_clients.append(new_client)
 
     def answer_client(self, client: ConnectedClient):
-        # for connected_client in self.connected_clients:
-        #     if client is connected_client:
+        # Controller function
         message = client.receive_message()
 
         if message is None:
@@ -27,11 +33,87 @@ class RequestProcessor:
             self.send_chat_from_user(client, message['data']['message'])
 
         elif message['mtp'] == 'Disconnect':
-            client.is_connected = True
             self.disconnect_client(client)
 
         elif message['mtp'] == 'SetUsername':
-            pass
+            self.set_username(client, message['data']['name'])
+
+        elif message['mtp'] == 'RequestUserInfo':
+            found_user = False
+            for user in self.connected_clients:
+                if user.name == message['data']['name']:
+                    client.send_message(messages.ProvideUserInfo(user))
+                    found_user = True
+            if not found_user:
+                client.send_message(messages.ProvideUserInfo(None, status='UserDoesNotExist'))
+
+        elif message['mtp'] == 'RequestLocalTime':
+            client.send_message(messages.SendLocalTime())
+
+        elif message['mtp'] == 'WhisperToUser':
+            for user in self.connected_clients:
+                if user.name in message['data']['to']:
+                    user.send_message(messages.WhisperFromUser(client.name, message['data']['message']))
+
+        elif message['mtp'] == 'RequestOnlineList':
+            client.send_message(messages.SendOnlineList([user.name for user in self.connected_clients]))
+
+        elif message['mtp'] == 'KickUser':
+            if client is self.admin:
+                found_user = False
+                for user in self.connected_clients:
+                    if user.name in message['data']['name']:
+                        self.disconnect_client(user, 'Kicked from the server.')
+                        client.send_message(messages.KickUser(status='OK'))
+                        found_user = True
+                        
+                if not found_user:
+                    client.send_message(messages.KickUser(status='UserDoesNotExist'))
+            else:
+                client.send_message(messages.KickUser(status='NotAdminError'))
+
+        elif message['mtp'] == 'MuteUser':
+            if client is self.admin:
+                found_user = False
+                for user in self.connected_clients:
+                    if user.name in message['data']['name']:
+                        self.announce(f'{user.name} has been muted.')
+                        client.send_message(messages.MuteUser(status='OK'))
+                        found_user = True
+                        
+                if not found_user:
+                    client.send_message(messages.MuteUser(status='UserDoesNotExist'))
+            else:
+                client.send_message(messages.MuteUser(status='NotAdminError'))
+
+        elif message['mtp'] == 'UnmuteUser':
+            if client is self.admin:
+                found_user = False
+                for user in self.connected_clients:
+                    if user.name in message['data']['name']:
+                        self.announce(f'{user.name} has been unmuted.')
+                        client.send_message(messages.UnmuteUser(status='OK'))
+                        found_user = True
+                        
+                if not found_user:
+                    client.send_message(messages.UnmuteUser(status='UserDoesNotExist'))
+            else:
+                client.send_message(messages.UnmuteUser(status='NotAdminError'))
+
+        elif message['mtp'] == 'SetAsAdmin':
+            if client is self.admin:
+                found_user = False
+                for user in self.connected_clients:
+                    if user.name in message['data']['name']:
+                        self.admin = user
+                        self.announce(f'{user.name} is now the admin.')
+                        client.send_message(messages.SetAdmin(status='OK'))
+                        found_user = True
+                        
+                if not found_user:
+                    client.send_message(messages.SetAdmin(status='UserDoesNotExist'))
+            else:
+                client.send_message(messages.SetAdmin(status='NotAdminError'))
 
         else:
             logger.error('Unsupported message type received!')
@@ -42,8 +124,24 @@ class RequestProcessor:
                 client.send_message(messages.SendChatFromUser(user.name, message))
         logger.chat(f'{user.name}: {message}')
 
-    def disconnect_client(self, outgoing_client: ConnectedClient):
+    def disconnect_client(self, outgoing_client: ConnectedClient, reason=""):
+        if outgoing_client is self.admin:
+            found_user = False
+            for user in self.connected_clients:
+                if user is not outgoing_client:
+                    self.admin = user
+                    found_user = True
+                    break
+            if found_user:
+                self.announce(f'{self.admin.name} is now the admin.')
+            else:
+                self.admin = None
+
+        if outgoing_client in self.muted_list:
+            self.muted_list.remove(outgoing_client)
+
         if outgoing_client.is_connected:
+            outgoing_client.send_message(messages.Disconnect(reason))
             logger.debug(f'Disconnected {outgoing_client}')
         else:
             logger.warning(f'Client ({outgoing_client}) disconnected unexpectedly.')
@@ -51,6 +149,7 @@ class RequestProcessor:
         self.connected_clients.remove(outgoing_client)
         self.sockets.remove(outgoing_client.socket)
         self.announce(f'{outgoing_client.name} left the server.')
+
         outgoing_client.close()
 
     def announce(self, server_message):
@@ -77,11 +176,17 @@ class RequestProcessor:
                 client.set_name(requested_name)
                 return True
 
+    def set_username(self, client, new_name):
+        self.announce(f'{client.name} has changed username to {new_name}.')
+        client.name = new_name
+
+
     def shutdown(self):
         logger.info('Disconnecting all clients.')
         for client in self.connected_clients:
-            self.disconnect_client(client)
+            self.disconnect_client(client, "Server is shutting down.")
         logger.info('Disconnected all clients. Server now shutting down.')
+        self.is_running = False
 
     def check_name(self, name):
         for client in self.connected_clients:
