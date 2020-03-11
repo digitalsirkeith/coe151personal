@@ -5,6 +5,8 @@ class ConnectedClient:
     def __init__(self, conn, addr):
         self.socket = conn
         self.addr = addr
+        self.ip_addr = addr[0]
+        self.port = addr[1]
         self.name = ''
         self.is_connected = True
 

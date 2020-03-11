@@ -17,16 +17,17 @@ def run():
 
         for fd in read_list:
             if fd is sys.stdin:
-                # User entered something
                 user_input = input()
-                connection.send_chat(user_input)
-                print('KOLD')
+                message = connection.encode_message(user_input)
+                connection.send_message(message)
+
             else:
                 # server sent something
                 message = connection.receive_message()
 
                 if message is None:
                     connection.terminate()
+                    return
 
                 elif message['mtp'] == 'ServerMessage':
                     print(message['data']['message'])

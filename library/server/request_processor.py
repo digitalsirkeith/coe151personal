@@ -21,7 +21,9 @@ class RequestProcessor:
                     self.disconnect_client(client)
 
                 elif message['mtp'] == 'SendChat':
-                    self.send_chat_from_user(client, message)
+                    self.send_chat_from_user(client, message['data']['message'])
+
+                elif message['mtp'] == 'SetUsername':
                     pass
 
                 else:
@@ -35,11 +37,12 @@ class RequestProcessor:
 
     def disconnect_client(self, outgoing_client: ConnectedClient):
         if outgoing_client.is_connected:
-            outgoing_client.send_message()
-            pass
+            outgoing_client.send_message(messages.Disconnect())
+            logger.debug(f'Disconnected {outgoing_client}')
         else:
             logger.warning(f'Client ({outgoing_client}) disconnected unexpectedly.')
-            self.connected_clients.remove(outgoing_client)
+
+        self.connected_clients.remove(outgoing_client)
         self.announce(f'{outgoing_client.name} left the server.')
         outgoing_client.close()
 
@@ -56,19 +59,30 @@ class RequestProcessor:
             return False
         else:
             requested_name = request['data']['name']
-            for connected_client in self.connected_clients:
-                if requested_name == connected_client.name:
-                    logger.error(f'Client requested name already exists! Disconnecting.')
-                    client.send_message(messages.AssignUsername(requested_name, status="DuplicateError"))
-                    return False
 
-            client.send_message(messages.AssignUsername(requested_name))
-            client.set_name(requested_name)
-            
-            return True
+            if self.check_name(requested_name):
+                logger.error(f'Client requested name already exists! Disconnecting.')
+                client.send_message(messages.AssignUsername(requested_name, status="DuplicateError"))
+                return False
+
+            else:
+                client.send_message(messages.AssignUsername(requested_name))
+                client.set_name(requested_name)
+                return True
 
     def shutdown(self):
-        pass
+        logger.info('Disconnecting all clients.')
+        for client in self.connected_clients:
+            self.disconnect_client(client)
+        logger.info('Disconnected all clients. Server now shutting down.')
+
+    def check_name(self, name):
+        for client in self.connected_clients:
+            if name == client.name:
+                return False
+        return True
+
 
     def purge_clients(self):
+        # Supposedly kick all clients that have not responded to a keepAlive packet
         pass

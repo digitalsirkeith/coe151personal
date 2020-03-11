@@ -34,16 +34,42 @@ class Connection:
             logger.info(f'Connected with name: {self.name}')
             return True
 
-    def send_chat(self, message):
-        self.send_message(messages.SendChat(message))
-
     def terminate(self):
         if self.is_connected:
             self.send_message(messages.Disconnect())
-            self.socket.close()
-        else:
-            self.socket.close()
         logger.info('Connection terminated.')
 
     def set_name(self, new_name):
         self.name = new_name
+
+    def encode_message(self, user_input):
+        tokens = user_input.split()
+
+        if not tokens:
+            return None
+
+        if tokens[0][0] != '/':
+            return messages.SendChat(user_input)
+        elif tokens[0] in ['/changename', '/setusername', '/su']:
+            return messages.SetUsername(tokens[1])
+        elif tokens[0] in ['/request_user_info', '/who', '/rui']:
+            return messages.RequestUserInfo(tokens[1])
+        elif tokens[0] in ['/request_local_time', '/time']:
+            return messages.RequestLocalTime()
+        elif tokens[0] in ['/whisper_to_user', '/msg', '/w']:
+            return messages.WhisperToUser(self.name, [tokens[1]], ' '.join(tokens[2:]))
+        elif tokens[0] in ['/request_online_list', '/online', '/list']:
+            return messages.RequestOnlineList()
+        elif tokens[0] in ['/quit', '/exit', '/disconnect']:
+            return messages.Disconnect()
+        elif tokens[0] in ['/kick', '/kick_user']:
+            return messages.KickUser(tokens[1])
+        elif tokens[0] in ['/mute', '/mute_user']:
+            return messages.MuteUser(tokens[1])
+        elif tokens[0] in ['/unmute', '/unmute_user']:
+            return messages.UnmuteUser(tokens[1])
+        elif tokens[0] in ['/op', '/setadmin']:
+            return messages.UnmuteUser(tokens[1])
+        else:
+            logger.error('Unknown command!')
+            return None

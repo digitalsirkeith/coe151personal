@@ -41,13 +41,13 @@ def run():
                         request_processor.add_client(new_client)
                         logger.info(f'Handshake successful with {new_client}')
                         request_processor.announce(f'{new_client.name} joined the server.')
-                        
+
                 elif fd == sys.stdin:
                     # User entered a server command.
                     user_input = input()
                     if user_input == 'exit':
                         request_processor.shutdown()
-                        break
+                        return
                 else:
                     # Someone sent something, find who did it and process it accordingly
                     for client in request_processor.get_connected_clients():
