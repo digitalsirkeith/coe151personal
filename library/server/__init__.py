@@ -15,10 +15,12 @@ def run():
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
         if config.USE_DEFAULT_PORT:
-            server_socket.bind(('', config.DEFAULT_PORT))
+            port = config.DEFAULT_PORT
         else:
             port = prompt_for_port()
-            server_socket.bind(('', port))
+            
+        server_socket.bind(('', port))
+        logger.info(f'Now listening as: {socket.gethostname()}:{port}')
         
         server_socket.listen(config.MAXIMUM_CONNECTIONS)
         sockets.append(server_socket)
@@ -30,10 +32,10 @@ def run():
                 if sock == server_socket:
                     logger.debug('Incoming new connection.')
                     conn, addr = server_socket.accept()
-                    logger.debug(f'New connection from: {addr}.')
+                    logger.debug(f'New connection from: {addr[0]}:{addr[1]}.')
                     new_client = ConnectedClient(conn, addr)
 
-                    if new_client.handshake() is True:
+                    if request_processor.handshake(new_client) is True:
                         sockets.append(new_client.socket)
                         request_processor.add_client(new_client)
                         logger.info(f'Handshake successful with {new_client}')

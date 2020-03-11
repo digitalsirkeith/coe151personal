@@ -11,3 +11,7 @@ def debug(message):
 def warning(message):
     if 'warning' in config.ENABLED_LOGGERS:
         print(f'[WARNING] {message}')
+
+def error(message):
+    if 'error' in config.ENABLED_LOGGERS:
+        print(f'[ERROR] {message}')
