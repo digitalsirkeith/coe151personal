@@ -27,7 +27,7 @@ def onSendLocalTime(data, connection):
     print(f'Server local time: {data.time}')
 
 def onWhisperFromUser(data, connection):
-    print(f'[{data.name} -> me]: {data.message}')
+    print(f'[{data.from_user} -> me]: {data.message}')
 
 def onSendOnlineList(data, connection):
     print(f'Online Users:', ', '.join(data.names))

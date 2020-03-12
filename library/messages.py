@@ -15,6 +15,7 @@ class MessageData:
         self.port = None
         self.names = None
         self.to_users = None
+        self.from_user = None
 
         if 'name' in message['data']:
             self.name = message['data']['name']
@@ -24,6 +25,9 @@ class MessageData:
 
         if 'to' in message['data']:
             self.to_users = message['data']['to']
+
+        if 'from' in message['data']:
+            self.from_user = message['data']['from']
 
         if 'message' in message['data']:
             self.message = message['data']['message']
@@ -187,7 +191,7 @@ def WhisperFromUser(name, message):
     return json.dumps({
         'mtp': 'WhisperFromUser',
         'data': {
-            'name': name,
+            'from': name,
             'message': message
         }
     })
