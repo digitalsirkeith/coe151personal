@@ -18,7 +18,7 @@ def run():
             
         server_socket.bind(('', port))
         server_socket.listen(config.MAXIMUM_CONNECTIONS)
-        logger.info(f'Now listening as: {socket.gethostname()}:{port}')
+        logger.info(f'Now listening as: {server_socket.getsockname()[0]}:{port}')
 
         manager = Manager(server_socket)
         while manager.is_running:

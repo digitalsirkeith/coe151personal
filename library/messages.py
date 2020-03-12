@@ -172,10 +172,10 @@ def ProvideUserInfo(client, status='OK'):
     return json.dumps({
         'mtp': 'ProvideUserInfo',
         'data': {
-            'name': client.name,
-            'ip': client.ip_addr,
-            'port': client.port
-        } if client else {},
+            'name': client.name if client else '',
+            'ip': client.ip_addr if client else '',
+            'port': client.port if client else 0,
+        },
         'status': status
     })
 
@@ -220,3 +220,11 @@ def ServerMessage(message):
             'message': message
         }
     })
+
+def Discovery(peer):
+    pass
+
+def DiscoveryResponse(peer):
+    pass
+
+# def 
