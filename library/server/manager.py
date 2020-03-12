@@ -31,46 +31,48 @@ class Manager:
         if message is None:
             self.disconnect_client(client)
 
-        elif message['mtp'] == 'SendChat':
+        data = messages.MessageData(message)
+
+        if data.mtp == 'SendChat':
             if client not in self.muted_list:
-                self.send_chat_from_user(client, message['data']['message'])
+                self.send_chat_from_user(client, data.message)
             else:
                 client.send_message(messages.ServerMessage('You are muted.'))
 
-        elif message['mtp'] == 'Disconnect':
+        elif data.mtp == 'Disconnect':
             self.disconnect_client(client)
 
-        elif message['mtp'] == 'SetUsername':
-            self.set_username(client, message['data']['name'])
+        elif data.mtp == 'SetUsername':
+            self.set_username(client, data.name)
 
-        elif message['mtp'] == 'RequestUserInfo':
+        elif data.mtp == 'RequestUserInfo':
             found_user = False
             for user in self.users:
-                if user.name == message['data']['name']:
+                if user.name == data.name:
                     client.send_message(messages.ProvideUserInfo(user))
                     found_user = True
             if not found_user:
                 client.send_message(messages.ProvideUserInfo(None, status='UserDoesNotExist'))
 
-        elif message['mtp'] == 'RequestLocalTime':
+        elif data.mtp == 'RequestLocalTime':
             client.send_message(messages.SendLocalTime())
 
-        elif message['mtp'] == 'WhisperToUser':
+        elif data.mtp == 'WhisperToUser':
             if client not in self.muted_list:
                 for user in self.users:
-                    if user.name in message['data']['to']:
-                        user.send_message(messages.WhisperFromUser(client.name, message['data']['message']))
+                    if user.name in data.to_users:
+                        user.send_message(messages.WhisperFromUser(client.name, data.message))
             else:
                 client.send_message(messages.ServerMessage('You are muted.'))
 
-        elif message['mtp'] == 'RequestOnlineList':
+        elif data.mtp == 'RequestOnlineList':
             client.send_message(messages.SendOnlineList([user.name for user in self.users]))
 
-        elif message['mtp'] == 'KickUser':
+        elif data.mtp == 'KickUser':
             if client is self.admin:
                 found_user = False
                 for user in self.users:
-                    if user.name in message['data']['name']:
+                    if user.name in data.name:
                         client.send_message(messages.KickUser(status='OK'))
                         self.disconnect_client(user, 'Kicked from the server.')
                         self.announce(f'{user.name} has been kicked from the server.')
@@ -81,11 +83,11 @@ class Manager:
             else:
                 client.send_message(messages.KickUser(status='NotAdminError'))
 
-        elif message['mtp'] == 'MuteUser':
+        elif data.mtp == 'MuteUser':
             if client is self.admin:
                 found_user = False
                 for user in self.users:
-                    if user.name in message['data']['name']:
+                    if user.name in data.name:
                         if user not in self.muted_list:
                             self.muted_list.append(user)
                             self.announce(f'{user.name} has been muted.')
@@ -99,11 +101,11 @@ class Manager:
             else:
                 client.send_message(messages.MuteUser(status='NotAdminError'))
 
-        elif message['mtp'] == 'UnmuteUser':
+        elif data.mtp == 'UnmuteUser':
             if client is self.admin:
                 found_user = False
                 for user in self.users:
-                    if user.name in message['data']['name']:
+                    if user.name in data.name:
                         if user in self.muted_list:
                             self.muted_list.remove(user)
                             self.announce(f'{user.name} has been unmuted.')
@@ -118,11 +120,11 @@ class Manager:
             else:
                 client.send_message(messages.UnmuteUser(status='NotAdminError'))
 
-        elif message['mtp'] == 'SetAsAdmin':
+        elif data.mtp == 'SetAsAdmin':
             if client is self.admin:
                 found_user = False
                 for user in self.users:
-                    if user.name in message['data']['name']:
+                    if user.name in data.name:
                         if user is client:
                             client.send_message(messages.SetAsAdmin(status='AlreadyAdmin'))
                         else:

@@ -14,12 +14,16 @@ class MessageData:
         self.ip = None
         self.port = None
         self.names = None
+        self.to_users = None
 
         if 'name' in message['data']:
             self.name = message['data']['name']
 
         if 'names' in message['data']:
             self.names = message['data']['names']
+
+        if 'to' in message['data']:
+            self.to_users = message['data']['to']
 
         if 'message' in message['data']:
             self.message = message['data']['message']
