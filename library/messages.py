@@ -1,6 +1,43 @@
 import json
 from datetime import datetime
 
+"""
+    Helper class for parsing message data
+"""
+
+class MessageData:
+    def __init__(self, message):
+        self.name = None
+        self.status = None
+        self.message = None
+        self.time = None
+        self.ip = None
+        self.port = None
+        self.names = None
+
+        if 'name' in message['data']:
+            self.name = message['data']['name']
+
+        if 'names' in message['data']:
+            self.names = message['data']['names']
+
+        if 'message' in message['data']:
+            self.message = message['data']['message']
+            
+        if 'time' in message['data']:
+            self.time = message['data']['time']
+
+        if 'ip' in message['data']:
+            self.ip = message['data']['ip']
+        
+        if 'port' in message['data']:
+            self.port = message['data']['port']
+
+        self.mtp = message['mtp']
+
+        if 'status' in message:
+            self.status = message['status']
+
 """ 
     Both Serverbound and Clientbound
     These are messages sent both by client and server.

@@ -1,7 +1,7 @@
 from .. import config
 import json
 
-class ConnectedClient:
+class User:
     def __init__(self, conn, addr):
         self.socket = conn
         self.addr = addr
@@ -45,3 +45,6 @@ class ConnectedClient:
 
     def close(self):
         self.socket.close()
+
+    def fileno(self):
+        return self.socket.fileno()
