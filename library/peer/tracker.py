@@ -1,6 +1,9 @@
 import json
 import socket
 from .. import config
+from .. import messages
+from .. import logger
+import select
 
 class Peer:
     def __init__(self, ip: str, port: int, name: str):
@@ -16,22 +19,20 @@ class Peer:
             'name': self.name
         }
 
-    @staticmethod
-    def decode(message):
-        ip = message['data']['ip']
-        port = message['data']['port']
-        name = message['data']['name']
-
-        return Peer(ip, port, name)
-
     def address(self):
         return (self.ip, self.port)
+
+    def __repr__(self):
+        if self.name:
+            return f'{self.name} ({self.ip}:{self.port})'
+        else:
+            return f'{self.ip}:{self.port}'
 
 class PeerTracker(Peer):
     def __init__(self, port: int, peer_socket):
         super().__init__(self.get_ip(), port, None)
         self.socket = peer_socket
-        self.peers = []
+        self.peers = [self]
 
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
@@ -44,11 +45,84 @@ class PeerTracker(Peer):
     def receive_message(self):
         data, addr = self.socket.recvfrom(config.MAXIMUM_MESSAGE_LENGTH)
 
+        return json.loads(data), addr
+
+    def discover_peer_names(self):
+        logger.info(f'Starting discovery phase...')
+        self.broadcast_message(messages.Discovery(self))
+        logger.info(f'Discovering other peers in the subnet...')
+
+        peer_names = []
+        
+        while True:
+            read_list, _, __ = select.select([self.socket], [], [], config.DISCOVERY_TIME_LIMIT)
+
+            if len(read_list):
+                message, _ = self.receive_message()
+                data = messages.MessageData(message)
+
+                if data.mtp == 'DiscoveryResponse':
+                    peer_names.append(data.name)
+            else:
+                # timeout, move to next phase
+                return peer_names
+
+    def handshake(self, name):
+        self.name = name
+        logger.info(f'Sending handshake messages with ip and port: {self.ip}:{self.port} using {self.name}')
+        self.broadcast_message(messages.Handshake(self))
+        logger.info(f'Waiting for response from other peers...')
+
+    def get_peer(self, addr):
         for peer in self.peers:
             if peer.address() == addr:
-                return json.loads(data), peer
+                return peer
+        return Peer(addr[0], addr[1], None)
 
-        return json.loads(data), None
+    def get_peer_from_name(self, name):
+        for peer in self.peers:
+            if peer.name == name:
+                return peer
+        return None
+
+    def add_peer(self, peer):
+        self.peers.append(peer)
+
+    def remove_peer(self, peer):
+        if self is not peer:
+            self.peers.remove(peer)
+        else:
+            logger.error('You cannot disconnect from yourself!')
+
+    def disconnect_peer(self, name):
+        if self.name != name:
+            peer = self.get_peer_from_name(name)
+            self.send_message(messages.Disconnect(), peer)
+            self.peers.remove(peer)
+        else:
+            logger.error('You cannot disconnect from yourself!')
+
+    def send_chat(self, message):
+        self.broadcast_message(messages.SendChat(message))
+
+        for peer in self.peers:
+            if peer.port != self.port:
+                self.send_message(messages.SendChat(message), peer)
+
+    def online(self):
+        return [peer.name for peer in self.peers]
+
+    def whisper(self, name, message):
+        peer = self.get_peer_from_name(name)
+        self.send_message(messages.Whisper(message), peer)
+
+    def quit(self):
+        logger.info('Disconnecting from all peers...')
+        self.broadcast_message(messages.Disconnect())
+
+        for peer in self.peers:
+            if peer.port != self.port:
+                self.send_message(messages.Disconnect(), peer)
 
     @staticmethod
     def get_ip():

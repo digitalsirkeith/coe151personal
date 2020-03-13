@@ -221,10 +221,58 @@ def ServerMessage(message):
         }
     })
 
+"""
+    Peer-Peer messages
+"""
+
 def Discovery(peer):
-    pass
+    return json.dumps({
+        'mtp': 'Discovery',
+        'data': {
+            'ip': peer.ip,
+            'port': peer.port
+        }
+    })
 
 def DiscoveryResponse(peer):
-    pass
+    return json.dumps({
+        'mtp': 'DiscoveryResponse',
+        'data': {
+            'ip': peer.ip,
+            'port': peer.port,
+            'name': peer.name
+        }
+    })
+
+def Handshake(peer, status="OK"):
+    return json.dumps({
+        'mtp': 'Handshake',
+        'data': {
+            'ip': peer.ip,
+            'port': peer.port,
+            'name': peer.name
+        }
+    })
+
+def HandshakeResponse(peer, status="OK"):
+    return json.dumps({
+        'mtp': 'HandshakeResponse',
+        'data': {
+            'ip': peer.ip,
+            'port': peer.port,
+            'name': peer.name
+        },
+        'status': "OK"
+    })
+
+# SendChat is already implemented in the serverbound model
+
+def Whisper(message):
+    return json.dumps({
+        'mtp': 'Whisper',
+        'data': {
+            'message': message
+        }
+    })
 
 # def 

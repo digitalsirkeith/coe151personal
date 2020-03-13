@@ -5,3 +5,4 @@ ENABLED_LOGGERS = ['debug', 'info', 'warning', 'error', 'chat']
 CLIENT_MODE = 'terminal'
 INTERFACE = 'en0'
 MAXIMUM_MESSAGE_LENGTH = 1024
+DISCOVERY_TIME_LIMIT = 1

@@ -33,7 +33,7 @@ def run():
                 if message:
                     connection.send_message(message)
 
-            else:
+            elif connection.socket is readable:
                 # server sent something
                 message = connection.receive_message()
                 if handler.handle_message(message, connection):
