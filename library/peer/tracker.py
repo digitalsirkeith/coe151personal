@@ -33,6 +33,7 @@ class PeerTracker(Peer):
         super().__init__(self.get_ip(), port, None)
         self.socket = peer_socket
         self.peers = [self]
+        self.old_name = ''
 
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
 
@@ -41,6 +42,10 @@ class PeerTracker(Peer):
 
     def broadcast_message(self, message):
         self.socket.sendto(message.encode(), ('<broadcast>', self.port))
+
+        for peer in self.peers:
+            if peer.port != self.port:
+                self.socket.sendto(message.encode(), peer.address())
 
     def receive_message(self):
         data, addr = self.socket.recvfrom(config.MAXIMUM_MESSAGE_LENGTH)
@@ -97,6 +102,7 @@ class PeerTracker(Peer):
     def disconnect_peer(self, name):
         if self.name != name:
             peer = self.get_peer_from_name(name)
+            logger.info(f'Disconnected from {peer.name}')
             self.send_message(messages.Disconnect(), peer)
             self.peers.remove(peer)
         else:
@@ -104,10 +110,6 @@ class PeerTracker(Peer):
 
     def send_chat(self, message):
         self.broadcast_message(messages.SendChat(message))
-
-        for peer in self.peers:
-            if peer.port != self.port:
-                self.send_message(messages.SendChat(message), peer)
 
     def online(self):
         return [peer.name for peer in self.peers]
@@ -120,9 +122,20 @@ class PeerTracker(Peer):
         logger.info('Disconnecting from all peers...')
         self.broadcast_message(messages.Disconnect())
 
-        for peer in self.peers:
-            if peer.port != self.port:
-                self.send_message(messages.Disconnect(), peer)
+    def set_username(self, name):
+        self.old_name = self.name
+        self.name = name
+        self.broadcast_message(messages.SetUsername(self.name))
+        logger.info(f'New name: {self.name}')
+
+    def reset_username(self):
+        if self.old_name:
+            self.name = self.old_name
+            self.old_name = ''
+            self.broadcast_message(messages.SetUsername(self.name))
+        else:
+            logger.error(f'Old name still produces an error. Disconnecting from all peers.')
+            return True
 
     @staticmethod
     def get_ip():

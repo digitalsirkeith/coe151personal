@@ -55,4 +55,5 @@ def run():
                         return
                 elif peer_socket is readable:
                     message, addr = tracker.receive_message()
-                    handler.handle_message(message, tracker, addr)
+                    if handler.handle_message(message, tracker, addr):
+                        return

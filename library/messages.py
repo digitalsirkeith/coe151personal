@@ -262,7 +262,7 @@ def HandshakeResponse(peer, status="OK"):
             'port': peer.port,
             'name': peer.name
         },
-        'status': "OK"
+        'status': status
     })
 
 # SendChat is already implemented in the serverbound model
@@ -275,4 +275,11 @@ def Whisper(message):
         }
     })
 
-# def 
+def SetUsernameResponse(name, status="OK"):
+    return json.dumps({
+        'mtp': 'SetUsernameResponse',
+        'data': {
+            "name": name
+        },
+        'status': status
+    })

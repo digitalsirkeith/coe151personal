@@ -30,7 +30,9 @@ class Handler:
         self.on('HandshakeResponse', caller.onHandshakeResponse)
         self.on('Disconnect', caller.onDisconnect)
         self.on('SendChat', caller.onSendChat)
-        self.on('Whipser', caller.onWhisper)
+        self.on('Whisper', caller.onWhisper)
+        self.on('SetUsername', caller.onSetUsername)
+        self.on('SetUsernameResponse', caller.onSetUsernameResponse)
 
         # self.on('Terminate', caller.onTerminate)
         # self.on('ServerMessage', caller.onServerMessage)
@@ -97,15 +99,11 @@ class Handler:
             else:
                 logger.error(f'Usage: {tokens[0]} <username>')
 
-        # elif tokens[0] in ['/changename', '/setusername', '/su']:
-        #     if len(tokens) == 2:
-        #         return messages.SetUsername(tokens[1])
-        #     else:
-        #         logger.error(f'Usage: {tokens[0]} <username>')
-        #         return None
-
-        # elif tokens[0] in ['/request_local_time', '/time']:
-        #     return messages.RequestLocalTime()
+        elif tokens[0] in ['/changename', '/setusername', '/su']:
+            if len(tokens) == 2:
+                tracker.set_username(tokens[1])
+            else:
+                logger.error(f'Usage: {tokens[0]} <username>')
             
         else:
             logger.error('Unknown command!')
